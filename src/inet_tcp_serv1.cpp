@@ -18,7 +18,7 @@
 using namespace std;
 
 enum {
-	LISTEN_BACKLOG = 20,
+	LISTEN_BACKLOG = 32,
 	MAX_POOL = 3,
 };
 
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 		port = 0;	/* random port */
 	}
 	int fd_listener;
-	if (-1 == (fd_listener = socket(AF_INET, SOCK_STREAM, 0))) {
+	if (-1 == (fd_listener = socket(AF_INET, SOCK_STREAM, IPPROTO_IP))) {
 		pr_err("[TCP server] : Fail: socket()");
 		exit(EXIT_FAILURE);
 	}
