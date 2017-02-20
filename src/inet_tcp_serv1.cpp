@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
 #include <CoreFoundation/CoreFoundation.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -37,7 +38,7 @@ int main(int argc, char* argv[])
 		port = 0;	/* random port */
 	}
 	int fd_listener;
-	if (-1 == (fd_listener = socket(AF_INET, SOCK_STREAM, IPPROTO_IP))) {
+	if ((fd_listener = socket(AF_INET, SOCK_STREAM, IPPROTO_IP)) == -1) {
 		pr_err("[TCP server] : Fail: socket()");
 		exit(EXIT_FAILURE);
 	}
@@ -46,7 +47,7 @@ int main(int argc, char* argv[])
 	saddr_s.sin_family = AF_INET;
 	saddr_s.sin_addr.s_addr = INADDR_ANY;
 	saddr_s.sin_port = htons(port);
-	if (-1 == bind(fd_listener, (struct sockaddr*)&saddr_s, sizeof(saddr_s))) {
+	if (bind(fd_listener, (struct sockaddr*)&saddr_s, sizeof(saddr_s)) == -1) {
 		pr_err("[TCP server] Fail: bind()");
 		exit(EXIT_FAILURE);
 	}
