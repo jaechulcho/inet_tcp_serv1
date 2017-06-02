@@ -7,10 +7,12 @@
 //============================================================================
 
 #include <iostream>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
-#include <CoreFoundation/CoreFoundation.h>
+#include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -23,6 +25,7 @@ enum {
 	MAX_POOL = 3,
 };
 
+void setareadata(char *buf, int num);
 void start_child(int fd, int idx);
 int main(int argc, char* argv[])
 {
@@ -58,7 +61,8 @@ int main(int argc, char* argv[])
 	pr_out("[TCP server] Port : #%d", ntohs(saddr_s.sin_port));
 	listen(fd_listener, LISTEN_BACKLOG);
 	for (int i=0; i<MAX_POOL; i++) {
-		switch (int pid = fork()) {
+		int pid = fork();
+		switch (pid) {
 		case 0:
 			start_child(fd_listener, i);
 			exit(EXIT_SUCCESS);
@@ -92,7 +96,7 @@ void start_child(int sfd, int idx)
 					ntohs(((struct sockaddr_in*)&saddr_c)->sin_port));
 		}
 		for (;;) {
-			char buf[40];
+			char buf[2048];
 			int ret_len = recv(cfd, buf, sizeof(buf), 0);
 			if (-1 == ret_len) {
 				if (EINTR == errno) continue;
@@ -105,11 +109,74 @@ void start_child(int sfd, int idx)
 				break;
 			}
 			pr_out("[Child:%d] RECV(%.*s)", idx, ret_len, buf);
+			if (strncmp(buf, "getVHPROFILE", 12) == 0) {
+				sprintf(buf, "%d", 1);
+			}
+			else if (strncmp(buf, "getOBPROFILE", 12) == 0) {
+				sprintf(buf, "%d", 7);
+			}
+			else if (strncmp(buf, "setOBPROFILE", 12) == 0) {
+				sprintf(buf, "%s", "OK");
+			}
+			else if (strncmp(buf, "setVHPROFILE", 12) == 0) {
+				sprintf(buf, "%s", "OK");
+			}
+			else if (strcmp(buf, "OBINFO") == 0) {
+				setareadata(buf, 7);
+			}
+			else if (strcmp(buf, "VHINFO") == 0) {
+				setareadata(buf, 1);
+			}
+			else {
+				sprintf(buf, "%s", "NG");
+			}
+			ret_len = strlen(buf);
+			pr_out("[Child:%d] SEND(%.*s)", idx, ret_len, buf)
 			if (send(cfd, buf, ret_len, 0) == -1) {
 				pr_err("[Child:%d] Fail: send() to socket(%d)", idx, cfd);
 				close(cfd);
 			}
-			sleep(1); /* meaning-less conde */
+//			sleep(1); /* meaning-less conde */
 		} /* packet recv loop */
 	} /* main for loop */
+}
+
+void setareadata(char *buf, int num)
+{
+	if (1 == num) {
+		sprintf(buf, "%8f", 2.0		); buf += 8;	// for x
+		sprintf(buf, "%8f", 1.0		); buf += 8;	// fox y
+		sprintf(buf, "%8f", 0.1		); buf += 8;	// for x
+		sprintf(buf, "%8f", 0.0		); buf += 8;	// fox y
+		sprintf(buf, "%8f", 0.32	); buf += 8;	// for x
+		sprintf(buf, "%8f", 0.35	); buf += 8; 	// fox y
+		sprintf(buf, "%8f", 0.32	); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", 0.0		); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", -0.32	); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", -0.32	); buf += 8;	// for x
+		sprintf(buf, "%8f", 0.35	); buf += 8; 	// fox y
+		sprintf(buf, "%8f", -0.1	); buf += 8;	// for x
+		sprintf(buf, "%8f", 0.0		); buf += 8; 	// fox y
+	}
+	else {
+		sprintf(buf, "%8f", 2.0		); buf += 8;	// for x
+		sprintf(buf, "%8f", 1.0		); buf += 8;	// fox y
+		sprintf(buf, "%8f", 0.125	); buf += 8;	// for x
+		sprintf(buf, "%8f", 0.15	); buf += 8;	// fox y
+		sprintf(buf, "%8f", 0.125	); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", 0.125	); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", 0.0		); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", -0.125	); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", -0.125	); buf += 8;	// for x
+		sprintf(buf, "%8f", 5.0		); buf += 8; 	// fox y
+		sprintf(buf, "%8f", -0.125	); buf += 8;	// for x
+		sprintf(buf, "%8f", 0.15	); buf += 8; 	// fox y
+	}
 }
