@@ -27,6 +27,7 @@ enum {
 
 void setareadata(char *buf, int num);
 void start_child(int fd, int idx);
+void start_serial_child(int fd, int idx);
 int main(int argc, char* argv[])
 {
 	if (argc > 2) {
@@ -77,6 +78,44 @@ int main(int argc, char* argv[])
 	}
 	for(;;) pause();
 	return 0;
+}
+
+void start_serial_child(int sfd, int idx)
+{
+    struct sockaddr_storage saddr_c;
+    for (;;) {
+        socklen_t len_saddr = sizeof(saddr_c);
+        int cfd = accept(sfd, (struct sockaddr*)&saddr_c, &len_saddr);
+        if (-1 == cfd) {
+            pr_err("[Child] Fail: accept()");
+            close(cfd);
+            continue;
+        }
+        if (AF_INET == saddr_c.ss_family) {
+            pr_out("[Child:%d] accept (ip:port) (%s:%d)", idx,
+                    inet_ntoa(((struct sockaddr_in*)&saddr_c)->sin_addr),
+                    ntohs(((struct sockaddr_in*)&saddr_c)->sin_port));
+        }
+        for (;;) {
+            char buf[16];
+            int ret_len = recv(cfd, buf, sizeof(buf), 0);
+            if (-1 == ret_len) { /* error situation */
+                if (EINTR == errno) continue;
+                pr_err("[Child:%d] Session closed", idx);
+                break;
+            }
+            if (0 == ret_len) {  /* dis-connect situation */
+                pr_err("[Child:%d] Session closed", idx);
+                close(cfd);
+                break;
+            }
+
+            if (send(cfd, buf, ret_len, 0) == -1) {
+                pr_err("[Child:%d] Fail: send() to socket(%d)", idx, cfd);
+                close(cfd);
+            }
+        } /* packet recv loop */
+    } /* main for loop */
 }
 
 void start_child(int sfd, int idx)
