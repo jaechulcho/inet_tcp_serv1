@@ -20,6 +20,7 @@ include_directories("include")
 
 add_executable(serial_svr serial_svr/inet_tcp_serv1.cpp)
 add_executable(io_select io_select/io_select.cpp)
+add_executable(io_epoll io_epoll/io_epoll.cpp)
 
 #target_include_directories(serial_svr ${INCLUDE_DIRS})
 #target_link_libraries(tofapp X11 ${OpenCV_LIBS} ${VOXEL_LIBRARIES} pthread yaml-cpp rt )
